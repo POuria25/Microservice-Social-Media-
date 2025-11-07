@@ -1,0 +1,166 @@
+version: '3.8'
+
+networks:
+  smnet:
+    driver: bridge
+
+volumes:
+  user-pgdata:
+  post-pgdata:
+  gateway-pgdata:
+
+services:
+  # ============================================================================
+  # GATEWAY DATABASE
+  # ============================================================================
+  gateway-db:
+    image: postgres:15
+    container_name: gateway-db
+    environment:
+      POSTGRES_USER: ${GATEWAY_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${GATEWAY_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${GATEWAY_POSTGRES_DB}
+    volumes:
+      - gateway-pgdata:/var/lib/postgresql/data
+    networks:
+      - smnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GATEWAY_POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # GATEWAY SERVICE
+  # ============================================================================
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    environment:
+      - GATEWAY_POSTGRES_DSN=${GATEWAY_POSTGRES_DSN}
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://load-balancer:9001
+      - POST_SERVICE_URL=http://load-balancer:9002
+      - FEED_SERVICE_URL=${FEED_SERVICE_URL}
+    ports:
+      - "8443:8443"
+    networks:
+      - smnet
+    depends_on:
+      gateway-db:
+        condition: service_healthy
+      user-service-1:
+        condition: service_started
+      post-service-1:
+        condition: service_started
+
+  # ============================================================================
+  # USER SERVICE DATABASE
+  # ============================================================================
+  user-db:
+    image: postgres:15
+    container_name: user-db
+    environment:
+      POSTGRES_USER: ${USER_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${USER_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${USER_POSTGRES_DB}
+    volumes:
+      - user-pgdata:/var/lib/postgresql/data
+    networks:
+      - smnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USER_POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # USER SERVICES
+  # ============================================================================
+  user-service-1:
+    build: ./services/user-service
+    container_name: user-service-1
+    ports:
+      - "8001:5000"  # For testing: access directly via localhost:8001
+    environment:
+      - POSTGRES_DSN=${USER_POSTGRES_DSN}
+    networks:
+      - smnet
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  user-service-2:
+    build: ./services/user-service
+    container_name: user-service-2
+    environment:
+      - POSTGRES_DSN=${USER_POSTGRES_DSN}
+    networks:
+      - smnet
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  # ============================================================================
+  # POST SERVICE DATABASE
+  # ============================================================================
+  post-db:
+    image: postgres:15
+    container_name: post-db
+    environment:
+      POSTGRES_USER: ${POST_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POST_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POST_POSTGRES_DB}
+    volumes:
+      - post-pgdata:/var/lib/postgresql/data
+    networks:
+      - smnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POST_POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # POST SERVICES
+  # ============================================================================
+  post-service-1:
+    build: ./services/post-service
+    container_name: post-service-1
+    ports:
+      - "8002:5000"  # For testing: access directly via localhost:8002
+    environment:
+      - POSTGRES_DSN=${POST_POSTGRES_DSN}
+    networks:
+      - smnet
+    depends_on:
+      post-db:
+        condition: service_healthy
+
+  post-service-2:
+    build: ./services/post-service
+    container_name: post-service-2
+    environment:
+      - POSTGRES_DSN=${POST_POSTGRES_DSN}
+    networks:
+      - smnet
+    depends_on:
+      post-db:
+        condition: service_healthy
+
+  # ============================================================================
+  # LOAD BALANCER SERVICE
+  # ============================================================================
+  load-balancer:
+    build: ./load-balancer  # Path to your load balancer directory
+    container_name: load-balancer
+    ports:
+      - "9001:9001"  # User service load balancer
+      - "9002:9002"  # Post service load balancer
+    networks:
+      - smnet
+    depends_on:
+      - user-service-1
+      - user-service-2
+      - post-service-1
+      - post-service-2
