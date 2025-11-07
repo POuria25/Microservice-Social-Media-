@@ -1,0 +1,20 @@
+# Load Balancer Configuration
+
+pools:
+  # User-Service Pool
+  - name: "user-service"
+    listen_port: 9001
+    backends:
+      - "user-service-1:5000"
+      - "user-service-2:5000"
+  
+  # Post-Service Pool
+  - name: "post-service"
+    listen_port: 9002
+    backends:
+      - "post-service-1:5000"  # CORRECTED: Was 9001, now 5000
+      - "post-service-2:5000"  # CORRECTED: Was 9002, now 5000
+
+# Health check configuration
+health_check_interval: 10s
+connection_timeout: 5s
