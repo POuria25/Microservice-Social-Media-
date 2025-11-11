@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -25,28 +27,40 @@ func main() {
 
 	log.Println("All systems initialized")
 
+	// TLS configuration
+	certFile := "/app/certs/server.crt"
+	keyFile := "/app/certs/server.key"
+	port := "8443"
+
 	go func() {
-		log.Println("HTTP redirect :8080 -> https://localhost:8443")
-		_ = http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Starting HTTP server on :8080")
+
+		// Serve /metrics on HTTP (no redirect)
+		http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+			promhttp.Handler().ServeHTTP(w, r)
+		})
+
+		// Redirect everything else to HTTPS
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "https://localhost:8443"+r.URL.RequestURI(), http.StatusMovedPermanently)
-		}))
+		})
+
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			log.Fatalf("HTTP server error: %v", err)
+		}
 	}()
 
 	router := setupRoutes()
+	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
-	// Add this with your other service URLs
+	handler := prometheusMiddleware(router)
+	http.ListenAndServeTLS(":"+port, certFile, keyFile, handler)
+
 	feedServiceURL := os.Getenv("FEED_SERVICE_URL")
 	if feedServiceURL == "" {
 		feedServiceURL = "http://feed-service:5000"
 	}
 
-	// Add this route in your protected routes section
-	//protectedRouter.HandleFunc("/feed", proxyHandler(feedServiceURL)).Methods("GET")
-
-	// TLS configuration
-	certFile := "/app/certs/server.crt"
-	keyFile := "/app/certs/server.key"
-	port := "8443"
 	log.Printf("\n=== Gateway Server Starting ===")
 	log.Printf("Port: %s", port)
 	log.Printf("\nPublic Endpoints:")
@@ -62,7 +76,10 @@ func main() {
 	log.Printf("  GET      http://localhost:%s/api/feed", port)
 	log.Printf("\n===============================\n")
 
-	if err := http.ListenAndServeTLS(":"+port, certFile, keyFile, router); err != nil {
+	//handler = prometheusMiddleware(router)
+	//log.Println("Prometheus middleware enabled")
+
+	if err := http.ListenAndServeTLS(":"+port, certFile, keyFile, handler); err != nil {
 		log.Fatalf("Error starting TLS server: %v", err)
 	}
 }
