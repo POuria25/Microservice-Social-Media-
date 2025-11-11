@@ -1,0 +1,51 @@
+groups:
+  - name: gateway_rules
+    interval: 30s
+  
+    rules:
+      # RULE 1: Total Requests by HTTP Method
+      - record: gateway:requests_by_method:total
+        expr: sum by (method) (gateway_requests_total)
+        labels:
+          rule_type: "aggregation"
+
+      # RULE 2: Request Rate on POST /api/posts
+      - record: 
+        expr: rate(gateway_requests_total{endpoint="/api/posts", method="POST"}[1m])
+        labels:
+          rule_type: 'rate'
+          endpoint: '/api/posts'
+
+      # RULE 3: Average Request Latency per Endpoint
+      - record: gateway:request_latency:avg
+        expr: histogram_quantile(0.50, rate(gateway_request_latency_seconds_bucket[5m]))
+        labels:
+          rule_type: 'latency'
+          quantile: '50'
+
+      # Rule 4: Error rate (5xx errors)
+      - record: gateway:error_rate:5xx
+        expr: rate(gateway_requests_total{status=~"5.."}[5m])
+        labels:
+          rule_type: 'error_rate'
+          error_type: '5xx'
+      
+      # Rule 5: Success rate (2xx responses)
+      - record: gateway:success_rate:2xx
+        expr: rate(gateway_requests_total{status=~"2.."}[5m])
+        labels:
+          rule_type: 'success_rate'
+      
+      # Rule 6: 95th percentile latency (important for SLA)
+      - record: gateway:request_latency:p95
+        expr: histogram_quantile(0.95, rate(gateway_request_latency_seconds_bucket[5m]))
+        labels:
+          rule_type: 'latency'
+          quantile: '95'
+      
+      # Rule 7: Total requests per endpoint
+      - record: gateway:requests_by_endpoint:total
+        expr: sum by (endpoint) (gateway_requests_total)
+        labels:
+          rule_type: 'aggregation'
+
