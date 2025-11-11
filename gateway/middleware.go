@@ -4,10 +4,46 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func newResponseWriter(w http.ResponseWriter) *responseWriter {
+	return &responseWriter{w, http.StatusOK}
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func prometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		start := time.Now()
+
+		wrapped := newResponseWriter(w)
+
+		next.ServeHTTP(wrapped, r)
+
+		duration := time.Since(start).Seconds()
+
+		endpoint := r.URL.Path
+
+		status := strconv.Itoa(wrapped.statusCode)
+
+		requestCounter.WithLabelValues(endpoint, r.Method, status).Inc()
+		requestLatency.WithLabelValues(endpoint).Observe(duration)
+	})
+}
 
 func authMiddleware(next http.Handler) http.Handler {
 

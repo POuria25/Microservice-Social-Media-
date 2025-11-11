@@ -34,6 +34,15 @@ func main() {
 
 	router := setupRoutes()
 
+	// Add this with your other service URLs
+	feedServiceURL := os.Getenv("FEED_SERVICE_URL")
+	if feedServiceURL == "" {
+		feedServiceURL = "http://feed-service:5000"
+	}
+
+	// Add this route in your protected routes section
+	//protectedRouter.HandleFunc("/feed", proxyHandler(feedServiceURL)).Methods("GET")
+
 	// TLS configuration
 	certFile := "/app/certs/server.crt"
 	keyFile := "/app/certs/server.key"
