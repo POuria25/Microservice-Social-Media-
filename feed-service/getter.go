@@ -18,7 +18,6 @@ var (
 )
 
 func init() {
-
 	userServiceURL = os.Getenv("USER_SERVICE_URL")
 	if userServiceURL == "" {
 		userServiceURL = "http://user-load-balancer:9001"
@@ -40,8 +39,7 @@ func init() {
 	log.Printf("Port: %s", port)
 }
 
-func getUserFriend(userID string) ([]string, error) {
-
+func getUserFriends(userID string) ([]string, error) {
 	url := fmt.Sprintf("%s/profile/%s", userServiceURL, userID)
 	log.Printf("[Feed] Fetching friends for user %s from %s", userID, url)
 
@@ -50,7 +48,6 @@ func getUserFriend(userID string) ([]string, error) {
 		log.Printf("[Feed] Error calling user-service: %v", err)
 		return nil, fmt.Errorf("failed to call user-service: %w", err)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -58,21 +55,38 @@ func getUserFriend(userID string) ([]string, error) {
 		return nil, fmt.Errorf("user-service returned status %d", resp.StatusCode)
 	}
 
+	// Read response body for debugging
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[Feed] Error reading response: %v", err)
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	log.Printf("[Feed] User service response: %s", string(body))
+
+	// Parse response
 	var profile UserProfile
-	err = json.NewDecoder(resp.Body).Decode(&profile)
+	err = json.Unmarshal(body, &profile)
 	if err != nil {
 		log.Printf("[Feed] Error decoding user profile: %v", err)
 		return nil, fmt.Errorf("failed to decode user profile: %w", err)
 	}
 
+	// Check if Friends field exists and has data
+	if profile.Friends == nil {
+		log.Printf("[Feed] ⚠️ WARNING: User service did not return 'friends' field for user %s", userID)
+		log.Printf("[Feed] This means the user service doesn't store friend relationships!")
+		log.Printf("[Feed] Expected JSON: {\"id\":\"...\",\"email\":\"...\",\"friends\":[\"...\"]}")
+		log.Printf("[Feed] Got JSON: %s", string(body))
+		return []string{}, nil // Return empty, not error
+	}
+
 	log.Printf("[Feed] User %s has %d friend(s): %v", userID, len(profile.Friends), profile.Friends)
 	return profile.Friends, nil
-
 }
 
 func getPostForUser(userID string) ([]Post, error) {
-
-	url := fmt.Sprintf("%s/posts/%S", postServiceURL, userID)
+	url := fmt.Sprintf("%s/posts/%s", postServiceURL, userID)
 	log.Printf("[Feed] Fetching posts for user %s from %s", userID, url)
 
 	resp, err := http.Get(url)
@@ -134,7 +148,7 @@ func getPostFromfriends(friendIDs []string) []Post {
 	}()
 
 	for posts := range postsChan {
-		mu.TryLock()
+		mu.Lock()
 		allPosts = append(allPosts, posts...)
 		mu.Unlock()
 	}
@@ -144,7 +158,6 @@ func getPostFromfriends(friendIDs []string) []Post {
 }
 
 func sortAndLimitPosts(posts []Post, limit int) []Post {
-
 	sort.Slice(posts, func(i, j int) bool {
 		return posts[i].CreatedAt.After(posts[j].CreatedAt)
 	})
@@ -158,7 +171,6 @@ func sortAndLimitPosts(posts []Post, limit int) []Post {
 }
 
 func getFeedHandler(w http.ResponseWriter, r *http.Request) {
-
 	userID := r.Header.Get("X-User-ID")
 	if userID == "" {
 		log.Printf("[Feed] Missing X-User-ID header")
@@ -168,7 +180,7 @@ func getFeedHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[Feed] Processing feed request for user %s", userID)
 
-	friends, err := getUserFriend(userID)
+	friends, err := getUserFriends(userID)
 	if err != nil {
 		log.Printf("[Feed] Error getting friends: %v", err)
 		http.Error(w, "Failed to fetch friends", http.StatusInternalServerError)
@@ -196,7 +208,6 @@ func getFeedHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[Feed] Successfully generated feed for user %s with %d post(s)", userID, len(limited))
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(limited)
-	return
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
