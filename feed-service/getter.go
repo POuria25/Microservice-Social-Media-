@@ -74,7 +74,7 @@ func getUserFriends(userID string) ([]string, error) {
 
 	// Check if Friends field exists and has data
 	if profile.Friends == nil {
-		log.Printf("[Feed] ⚠️ WARNING: User service did not return 'friends' field for user %s", userID)
+		log.Printf("[Feed]  WARNING: User service did not return 'friends' field for user %s", userID)
 		log.Printf("[Feed] This means the user service doesn't store friend relationships!")
 		log.Printf("[Feed] Expected JSON: {\"id\":\"...\",\"email\":\"...\",\"friends\":[\"...\"]}")
 		log.Printf("[Feed] Got JSON: %s", string(body))
