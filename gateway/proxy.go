@@ -48,30 +48,41 @@ func initializeProxies() error {
 }
 
 func createReverseProxy(targetURL string) (*httputil.ReverseProxy, error) {
-
 	target, err := url.Parse(targetURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid target URL: %w", err)
 	}
 
-	//Create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
-	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 
-		originalDirector(req)
+		req.URL.Path = strings.TrimPrefix(req.URL.Path, "/api")
 
-		log.Printf("Forwarding: %s %s to %s %s", req.Method, req.URL.Path, target.Host, req.URL.Path)
+		req.URL.Scheme = target.Scheme
+		req.URL.Host = target.Host
+
+		if v := req.Header.Get("X-User-ID"); v != "" {
+			req.Header.Set("X-User-ID", v)
+
+			req.Header.Set("User-ID", v)
+		}
+		if v := req.Header.Get("Authorization"); v != "" {
+			req.Header.Set("Authorization", v)
+		}
+
+		//req.Header.Set("X-Forwarded-Host", req.Host)
+		//req.Header.Set("X-Forwarded-Proto", "https")
+
+		req.Header.Set("X-Original-Host", req.Host)
+		req.Header.Set("X-Forwarded-Host", req.Host)
+		req.Header.Set("X-Forwarded-Proto", "https")
+		req.Header.Set("X-Forwarded-For", req.RemoteAddr)
 	}
 
-	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("x Proxy error for %s %s: %v", r.Method, r.URL.Path, err)
-		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "not found") {
-			respondWithError(w, http.StatusBadGateway, "Not found")
-		} else {
-			respondWithError(w, http.StatusBadGateway, "Backend service temporarily unavaible")
-		}
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		log.Printf("BACKEND %s RESPONSE: %d %s", resp.Request.URL.Host, resp.StatusCode, resp.Request.URL.Path)
+		return nil
 	}
 
 	return proxy, nil

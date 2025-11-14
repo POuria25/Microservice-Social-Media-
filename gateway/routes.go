@@ -14,28 +14,27 @@ func setupRoutes() *mux.Router {
 	 */
 
 	router := mux.NewRouter()
-	//router.MethodNotAllowedHandler = http.HandlerFunc(methodNotAllowedHandler)
+	router.HandleFunc("/healthz", healthCheckHandler).Methods("GET")
 
 	// Public routes
 	router.HandleFunc("/api/auth/register", registerHandler).Methods("POST")
 	router.HandleFunc("/api/auth/login", loginHandler).Methods("POST")
-	router.HandleFunc("/healthz", healthCheckHandler).Methods("GET")
 
-	// Protected routes can be added here with authMiddleware
+	// Protected routes
+	api := router.PathPrefix("/api").Subrouter()
+	api.Use(authMiddleware)
 
-	protected := router.PathPrefix("/api").Subrouter()
-	protected.Use(authMiddleware)
-
-	protected.HandleFunc("/profile/me", proxyToUserService).Methods("GET", "POST")
-	protected.HandleFunc("/profile/{userId}", proxyToUserService).Methods("GET")
-	protected.HandleFunc("/friends", proxyToUserService).Methods("GET", "POST", "DELETE")
+	// User-service routes
+	api.HandleFunc("/profile/me", proxyToUserService).Methods("GET", "POST")
+	api.HandleFunc("/profile/{userId}", proxyToUserService).Methods("GET")
+	api.HandleFunc("/friends", proxyToUserService).Methods("GET", "POST", "DELETE")
 
 	// Post-service routes
-	protected.HandleFunc("/posts/me", proxyToPostService).Methods("GET", "POST")
-	protected.HandleFunc("/posts/{userId}", proxyToPostService).Methods("GET")
+	api.HandleFunc("/posts", proxyToPostService).Methods("GET", "POST")
+	api.HandleFunc("/posts/{userId}", proxyToPostService).Methods("GET")
 
-	// Feed-service routes
-	protected.HandleFunc("/feed", proxyToFeedService).Methods("GET")
+	// Feed-service
+	api.HandleFunc("/feed", proxyToFeedService).Methods("GET")
 
 	return router
 }
