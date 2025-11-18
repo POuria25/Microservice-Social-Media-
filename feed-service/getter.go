@@ -39,8 +39,8 @@ func init() {
 	log.Printf("Port: %s", port)
 }
 
-func getUserFriends(userID string) ([]string, error) {
-	url := fmt.Sprintf("%s/profile/%s", userServiceURL, userID)
+/*func getUserFriends(userID string) ([]string, error) {
+	url := fmt.Sprintf("%s/friends", userServiceURL)
 	log.Printf("[Feed] Fetching friends for user %s from %s", userID, url)
 
 	resp, err := http.Get(url)
@@ -83,6 +83,51 @@ func getUserFriends(userID string) ([]string, error) {
 
 	log.Printf("[Feed] User %s has %d friend(s): %v", userID, len(profile.Friends), profile.Friends)
 	return profile.Friends, nil
+}*/
+
+func getUserFriends(userID string) ([]string, error) {
+	if userID == "" {
+		return []string{}, fmt.Errorf("missing user ID")
+	}
+
+	url := fmt.Sprintf("%s/pro", userServiceURL)
+	log.Printf("[Feed] Fetching friends for user %s from %s", userID, url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request to user-service: %w", err)
+	}
+	req.Header.Set("X-User-ID", userID)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("calling user-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		log.Printf("[Feed] user-service returned 404 for user %s - treating as no friends", userID)
+		return []string{}, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[Feed] user-service returned status %d for user %s: %s", resp.StatusCode, userID, string(body))
+		return nil, fmt.Errorf("user-service returned status %d", resp.StatusCode)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+		log.Printf("[Feed] error decoding user-service response for user %s: %v", userID, err)
+		return nil, fmt.Errorf("decoding user profile: %w", err)
+	}
+
+	if profile.Friends == nil {
+		log.Printf("[Feed] user-service did not include 'friends' for user %s", userID)
+		return []string{}, nil
+	}
+
+	log.Printf("[Feed] User %s has %d friend(s): %v", userID, len(profile.Friends), profile.Friends)
+	return profile.Friends, nil
 }
 
 func getPostForUser(userID string) ([]Post, error) {
@@ -109,7 +154,7 @@ func getPostForUser(userID string) ([]Post, error) {
 	var posts []Post
 	if err := json.NewDecoder(resp.Body).Decode(&posts); err != nil {
 		log.Printf("[Feed] Error decoding posts for user %s: %v", userID, err)
-		return nil, fmt.Errorf("Failed to decode posts %w", err)
+		return nil, fmt.Errorf("failed to decode posts %w", err)
 	}
 
 	log.Printf("[Feed] Found %d post(s) for user %s", len(posts), userID)
