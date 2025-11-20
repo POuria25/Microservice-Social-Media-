@@ -39,53 +39,16 @@ func init() {
 	log.Printf("Port: %s", port)
 }
 
-/*func getUserFriends(userID string) ([]string, error) {
-	url := fmt.Sprintf("%s/friends", userServiceURL)
-	log.Printf("[Feed] Fetching friends for user %s from %s", userID, url)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Printf("[Feed] Error calling user-service: %v", err)
-		return nil, fmt.Errorf("failed to call user-service: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("[Feed] User-service returned status %d for user %s", resp.StatusCode, userID)
-		return nil, fmt.Errorf("user-service returned status %d", resp.StatusCode)
-	}
-
-	// Read response body for debugging
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("[Feed] Error reading response: %v", err)
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	log.Printf("[Feed] User service response: %s", string(body))
-
-	// Parse response
-	var profile UserProfile
-	err = json.Unmarshal(body, &profile)
-	if err != nil {
-		log.Printf("[Feed] Error decoding user profile: %v", err)
-		return nil, fmt.Errorf("failed to decode user profile: %w", err)
-	}
-
-	// Check if Friends field exists and has data
-	if profile.Friends == nil {
-		log.Printf("[Feed]  WARNING: User service did not return 'friends' field for user %s", userID)
-		log.Printf("[Feed] This means the user service doesn't store friend relationships!")
-		log.Printf("[Feed] Expected JSON: {\"id\":\"...\",\"email\":\"...\",\"friends\":[\"...\"]}")
-		log.Printf("[Feed] Got JSON: %s", string(body))
-		return []string{}, nil // Return empty, not error
-	}
-
-	log.Printf("[Feed] User %s has %d friend(s): %v", userID, len(profile.Friends), profile.Friends)
-	return profile.Friends, nil
-}*/
-
 func getUserFriends(userID string) ([]string, error) {
+
+	/*
+	* getUserFriends fetches the list of friend IDs for a given user from the user-service.
+	*
+	* @param userID string - The ID of the user whose friends are to be fetched.
+	* @return []string - A slice of friend user IDs.
+	* @return error - An error if the operation fails.
+	 */
+
 	if userID == "" {
 		return []string{}, fmt.Errorf("missing user ID")
 	}
@@ -131,6 +94,15 @@ func getUserFriends(userID string) ([]string, error) {
 }
 
 func getPostForUser(userID string) ([]Post, error) {
+
+	/*
+	* getPostForUser fetches posts for a specific user from the post-service.
+	*
+	* @param userID string - The ID of the user whose posts are to be fetched.
+	* @return []Post - A slice of Post objects.
+	* @return error - An error if the operation fails.
+	 */
+
 	url := fmt.Sprintf("%s/posts/%s", postServiceURL, userID)
 	log.Printf("[Feed] Fetching posts for user %s from %s", userID, url)
 
@@ -162,6 +134,14 @@ func getPostForUser(userID string) ([]Post, error) {
 }
 
 func getPostFromfriends(friendIDs []string) []Post {
+
+	/*
+	* getPostFromfriends fetches posts from all friends concurrently.
+	*
+	* @param friendIDs []string - A slice of friend user IDs.
+	* @return []Post - A slice of Post objects collected from all friends.
+	 */
+
 	var (
 		wg       sync.WaitGroup
 		mu       sync.Mutex
@@ -203,6 +183,16 @@ func getPostFromfriends(friendIDs []string) []Post {
 }
 
 func sortAndLimitPosts(posts []Post, limit int) []Post {
+
+	/*
+	* sortAndLimitPosts sorts posts by creation time in descending order and
+	* limits the result to a specified number.
+	*
+	* @param posts []Post - A slice of Post objects to be sorted and limited.
+	* @param limit int - The maximum number of posts to return.
+	* @return []Post - A slice of sorted and limited Post objects.
+	 */
+
 	sort.Slice(posts, func(i, j int) bool {
 		return posts[i].CreatedAt.After(posts[j].CreatedAt)
 	})
@@ -216,6 +206,14 @@ func sortAndLimitPosts(posts []Post, limit int) []Post {
 }
 
 func getFeedHandler(w http.ResponseWriter, r *http.Request) {
+
+	/*
+	* getFeedHandler handles the /feed endpoint to provide a user's feed.
+	*
+	* @param w http.ResponseWriter - The response writer to send data back to the client.
+	* @param r *http.Request - The incoming HTTP request.
+	 */
+
 	userID := r.Header.Get("X-User-ID")
 	if userID == "" {
 		log.Printf("[Feed] Missing X-User-ID header")
@@ -256,6 +254,14 @@ func getFeedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+
+	/*
+	* healthCheckHandler handles the /health endpoint to provide a health status of the service.
+	*
+	* @param w http.ResponseWriter - The response writer to send data back to the client.
+	* @param r *http.Request - The incoming HTTP request.
+	 */
+
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "Feed service is healthy\n")
 }

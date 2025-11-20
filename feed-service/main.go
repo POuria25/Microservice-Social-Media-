@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	// Set up logging
+	// Configure logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// Create router
@@ -20,12 +20,11 @@ func main() {
 
 	// Start server
 	addr := ":" + port
-	log.Printf("=== Feed Service Starting ===")
+	log.Printf("	Feed Service Starting...	")
 	log.Printf("Listening on %s", addr)
 	log.Printf("Endpoints:")
 	log.Printf("  GET /health - Health check")
 	log.Printf("  GET /feed   - Get user's feed (requires X-User-ID header)")
-	log.Printf("=============================")
 
 	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
