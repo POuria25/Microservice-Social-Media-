@@ -56,11 +56,11 @@ func main() {
 	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 	handler := prometheusMiddleware(router)
 
-	log.Printf("\n=== Gateway Server Starting ===")
+	log.Printf("\n    Gateway Server Starting    ")
 	log.Printf("HTTPS Port: %s", port)
 	log.Printf("HTTP Port: 8080")
 	log.Printf("Feed Service: %s", feedServiceURL)
-	log.Printf("\n✅ Prometheus Metrics:")
+	log.Printf("\nPrometheus Metrics:")
 	log.Printf("  HTTP:  http://localhost:8080/metrics")
 	log.Printf("  HTTPS: https://localhost:%s/metrics", port)
 	log.Printf("\nPublic Endpoints:")
@@ -74,8 +74,8 @@ func main() {
 	log.Printf("  GET/POST https://localhost:%s/api/posts/me", port)
 	log.Printf("  GET      https://localhost:%s/api/posts/{userId}", port)
 	log.Printf("  GET      https://localhost:%s/api/feed", port)
-	log.Printf("\n===============================\n")
-	log.Println("✅ Prometheus middleware enabled")
+	log.Printf("\n")
+	log.Println("Prometheus middleware enabled")
 
 	if err := http.ListenAndServeTLS(":"+port, certFile, keyFile, handler); err != nil {
 		log.Fatalf("Error starting TLS server: %v", err)

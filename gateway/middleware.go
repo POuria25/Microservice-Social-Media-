@@ -11,34 +11,60 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// responseWriter is a custom http.ResponseWriter that captures the status code for metrics.
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
+	/*
+	* newResponseWriter creates a new responseWriter that wraps the given http.ResponseWriter
+	* and initializes the status code to http.StatusOK.
+	*
+	* @param w http.ResponseWriter - The original response writer to wrap.
+	* @return *responseWriter - The wrapped response writer with status code tracking.
+	 */
+
 	return &responseWriter{w, http.StatusOK}
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
+
+	/*
+	* WriteHeader captures the status code and calls the underlying ResponseWriter's WriteHeader method.
+	*
+	* @param code int - The HTTP status code to write.
+	* @return void
+	 */
+
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
 
 func prometheusMiddleware(next http.Handler) http.Handler {
+	/*
+	* prometheusMiddleware is a middleware function that records Prometheus metrics for each HTTP request.
+	* It tracks the request count and latency for each endpoint.
+	* @param next http.Handler - The next handler to call in the chain.
+	*
+	* @return http.Handler - A new handler that includes the Prometheus metrics tracking.
+	 */
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		start := time.Now()
+		start := time.Now() // Start time for latency measurement
 
-		wrapped := newResponseWriter(w)
+		wrapped := newResponseWriter(w) // Wrap the original ResponseWriter
 
-		next.ServeHTTP(wrapped, r)
+		next.ServeHTTP(wrapped, r) // Call the next handler
 
-		duration := time.Since(start).Seconds()
+		duration := time.Since(start).Seconds() // Calculate request duration
 
-		endpoint := r.URL.Path
+		endpoint := r.URL.Path // Extract the endpoint path
 
-		status := strconv.Itoa(wrapped.statusCode)
+		status := strconv.Itoa(wrapped.statusCode) // Get the response status code
+
+		// Update Prometheus metrics
 
 		requestCounter.WithLabelValues(endpoint, r.Method, status).Inc()
 		requestLatency.WithLabelValues(endpoint).Observe(duration)

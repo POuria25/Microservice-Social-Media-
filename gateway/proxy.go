@@ -9,12 +9,14 @@ import (
 	"strings"
 )
 
+// Environment variable helper
 var (
 	userServiceURL = getEnvOrDefault("USER_SERVICE_URL", "http://user-load-balancer:9001")
 	postServiceURL = getEnvOrDefault("POST_SERVICE_URL", "http://post-load-balancer:9002")
 	feedServiceURL = getEnvOrDefault("FEED_SERVICE_URL", "http://feed-service:5000")
 )
 
+// Reverse proxy instances
 var (
 	userServiceProxy *httputil.ReverseProxy
 	postServiceProxy *httputil.ReverseProxy
@@ -22,6 +24,12 @@ var (
 )
 
 func initializeProxies() error {
+	/*
+	* initializeProxies sets up reverse proxies for user, post, and feed services.
+	*
+	* @return error - An error if any proxy initialization fails.
+	 */
+
 	var err error
 
 	userServiceProxy, err = createReverseProxy(userServiceURL)
@@ -48,6 +56,14 @@ func initializeProxies() error {
 }
 
 func createReverseProxy(targetURL string) (*httputil.ReverseProxy, error) {
+
+	/*
+	* createReverseProxy creates a reverse proxy for the given target URL.
+	* @param targetURL string - The target service URL to proxy requests to.
+	* @return *httputil.ReverseProxy - The configured reverse proxy.
+	* @return error - An error if the target URL is invalid.
+	 */
+
 	target, err := url.Parse(targetURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid target URL: %w", err)
