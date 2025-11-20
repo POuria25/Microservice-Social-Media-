@@ -32,7 +32,7 @@ func main() {
 
 	for _, pool := range config.Pools {
 
-		log.Printf("\n=== [%s] Initializing pool ===", pool.Name)
+		log.Printf("\n    [%s] Initializing pool    ", pool.Name)
 		log.Printf("  Port: %d", pool.ListenPort)
 		log.Printf("  Backends: %v", pool.Backends)
 
@@ -51,7 +51,7 @@ func main() {
 		}(lb, pool.ListenPort)
 	}
 
-	log.Println("\n=== All load balancers started successfully ===")
+	log.Println("\n    All load balancers started successfully    ")
 	log.Println("Press Ctrl+C to stop")
 
 	// Wait forever (until killed)

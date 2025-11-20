@@ -24,6 +24,13 @@ type Config struct {
 }
 
 func LoadConfig(path string) (*Config, error) {
+	/*
+	* LoadConfig reads and parses the load balancer configuration from a YAML file.
+	* @param path string - The file path to the YAML configuration file.
+	*
+	* @return *Config - A pointer to the Config struct containing the parsed configuration.
+	* @return error - An error if the loading or parsing fails, nil otherwise.
+	 */
 
 	data, err := os.ReadFile(path) // Read File
 	if err != nil {
@@ -55,6 +62,13 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 func (c *Config) GetHealthCheckInterval() time.Duration {
+	/*
+	* GetHealthCheckInterval retrieves the health check interval from the configuration.
+	* If not set or invalid, it returns a default value of 10 seconds.
+	*
+	* @return time.Duration - The health check interval duration.
+	 */
+
 	if c.HealthCheckInterval == "" {
 		return 10 * time.Second
 	}
@@ -68,6 +82,13 @@ func (c *Config) GetHealthCheckInterval() time.Duration {
 }
 
 func (c *Config) GetConnectionTimeout() time.Duration {
+
+	/*
+	* GetConnectionTimeout retrieves the connection timeout from the configuration.
+	* If not set or invalid, it returns a default value of 5 seconds.
+	* @return time.Duration - The connection timeout duration.
+	 */
+
 	if c.ConnectionTimeout == "" {
 		return 5 * time.Second
 	}

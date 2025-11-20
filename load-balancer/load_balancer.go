@@ -26,8 +26,8 @@ func (lb *LoadBalancer) NextBackend() *Backend {
 	*   Backend: The selected backend server
 	 */
 
-	lb.mutex.Lock()         // Lock the mutex for thread-safe access
-	defer lb.mutex.Unlock() // Ensure the mutex is unlocked after selection
+	lb.mutex.Lock()
+	defer lb.mutex.Unlock()
 
 	for i := 0; i < len(lb.backends); i++ { // Loop through backends to find an alive one
 		index := (int(lb.current)) % len(lb.backends) // Calculate the index using round-robin
