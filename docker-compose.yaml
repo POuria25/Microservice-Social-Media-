@@ -9,9 +9,9 @@ volumes:
   prometheus-data:
 
 services:
-  # ============================================================================
+  #                                                                            =
   # GATEWAY DATABASE
-  # ============================================================================
+  #                                                                            =
   gateway-db:
     image: postgres:15
     container_name: gateway-db
@@ -30,9 +30,9 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # GATEWAY SERVICE
-  # ============================================================================
+  #                                                                            =
   gateway:
     build: ./gateway
     container_name: gateway
@@ -54,9 +54,9 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # USER SERVICE DATABASE
-  # ============================================================================
+  #                                                                            =
   user-db:
     image: postgres:15
     container_name: user-db
@@ -75,9 +75,9 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # USER SERVICES
-  # ============================================================================
+  #                                                                            =
   user-service-1:
     build: ./services/user-service
     container_name: user-service-1
@@ -104,9 +104,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # POST SERVICE DATABASE
-  # ============================================================================
+  #                                                                            =
   post-db:
     image: postgres:15
     container_name: post-db
@@ -125,9 +125,9 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # POST SERVICES
-  # ============================================================================
+  #                                                                            =
   post-service-1:
     build: ./services/post-service
     container_name: post-service-1
@@ -154,9 +154,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # LOAD BALANCER SERVICE
-  # ============================================================================
+  #                                                                            =
   # THIS WAS MISSING IN YOUR FILE!
   load-balancer:
     build: ./load-balancer
@@ -177,9 +177,9 @@ services:
       - post-service-2
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # FEED SERVICE
-  # ============================================================================
+  #                                                                            =
   feed-service:
     build: ./feed-service
     container_name: feed-service
@@ -198,9 +198,9 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # ============================================================================
+  #                                                                            =
   # PROMETHEUS
-  # ============================================================================
+  #                                                                            =
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
